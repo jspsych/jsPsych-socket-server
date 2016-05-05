@@ -105,46 +105,90 @@ function find_room(data){
 }
 
 function create_room(id, experiment_id, total_participants){
-  return {
-    id: id,
-    experiment_id: experiment_id,
-    total_participants: total_participants,
-    started: false,
-    participants: function() {
-      try {
-        return Object.keys(io.nsps['/'].adapter.rooms[this.id].sockets).length;
-      } catch (e) {
-        //console.log(e);
-        return 0;
-      } finally {
 
-      }
-    },
-    messages: {
-      turn: [],
-      wait: 0,
-      sync: {}
-    },
-    join: function(socket) {
-      socket.join(this.id);
-      socket.room_id = this.id;
-      console.log(this.participants() + ' of ' + total_participants + ' ready in room '+this.id);
-      if(this.participants() == total_participants){
-        console.log('Starting room '+this.id);
-        this.start();
-      }
-    },
-    start: function(){
-      this.started = true;
-      var clients = io.nsps['/'].adapter.rooms[this.id].sockets;
-      var idx = 0;
-      for(var c in clients){
-        io.sockets.connected[c].player_id = idx;
-        idx++;
-        io.sockets.connected[c].emit('start', {player_id: io.sockets.connected[c].player_id});
-      }
+  var room = {};
+
+  room.id = id;
+  room.experiment_id = experiment_id;
+  room.total_participants = total_participants;
+  room.started = false;
+
+  room.messages = {
+    turn: [],
+    wait: 0,
+    sync: {},
+    ready: []
+  }
+
+  // returns the number of people in the room
+  room.participants = function(){
+    try {
+      return Object.keys(io.nsps['/'].adapter.rooms[this.id].sockets).length;
+    } catch (e) {
+      //console.log(e);
+      return 0;
+    } finally {
+
     }
   };
+
+  // adds client to this room
+  room.join =  function(client) {
+    client.join(this.id);
+    client.room_id = this.id;
+    this.update_all();
+    console.log(this.participants() + ' of ' + this.total_participants + ' ready in room '+this.id);
+    if(this.participants() == this.total_participants){
+      console.log('Confirming room '+this.id);
+      this.confirm_ready();
+    }
+  };
+
+  // called if someone disconnects
+  room.leave = function() {
+    this.update_all();
+  }
+
+  room.update_all = function(){
+    var n_participants = this.participants();
+    io.to(this.id).emit('room-update', {
+      participants: n_participants
+    });
+  }
+
+  room.confirm_ready = function() {
+    this.messages.ready = []; // clear the ready message holder
+    var clients = io.nsps['/'].adapter.rooms[this.id].sockets;
+    var idx;
+
+    // TODO: set a timeout here...
+
+    for(var c in clients){
+      io.sockets.connected[c].ready_id = idx;
+      idx++;
+      io.sockets.connected[c].once('ready-reply', function(message){
+        this.messages.ready.push(message.id);
+        if(this.messages.ready.length == this.total_participants){
+          // TODO: end timeout here
+          this.start();
+        }
+      });
+      io.sockets.connected[c].emit('ready', {id: io.sockets.connected[c].ready_id});
+    }
+  };
+
+  room.start = function(){
+    this.started = true;
+    var clients = io.nsps['/'].adapter.rooms[this.id].sockets;
+    var idx = 0;
+    for(var c in clients){
+      io.sockets.connected[c].player_id = idx;
+      idx++;
+      io.sockets.connected[c].emit('start', {player_id: io.sockets.connected[c].player_id});
+    }
+  }
+
+  return room;
 }
 
 function join_room(socket, room_to_join) {
