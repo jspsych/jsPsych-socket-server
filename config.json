@@ -1,9 +1,0 @@
-{
-  "port":3000,
-  "database": {
-    "link": "links/gcloud.js",
-    "config": {
-      "projectId": "my-app-engine-project-id"
-    }
-  }
-}
