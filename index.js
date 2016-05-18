@@ -3,9 +3,12 @@ var express = require('express');
 var app = express();
 var server = require('http').Server(app);
 var io = require('socket.io')(server);
+var fs = require('fs');
 //var database = require('./database');
 
-server.listen(3000);
+var config = JSON.parse(fs.readFileSync('config.json'));
+
+server.listen(config.port);
 
 // serve the www directory as a website
 app.use(express.static('www'));

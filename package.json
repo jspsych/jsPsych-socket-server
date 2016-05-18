@@ -23,6 +23,7 @@
   "homepage": "https://github.com/jspsych/jsPsych-node-server#readme",
   "dependencies": {
     "express": "4.13.4",
+    "fs": "0.0.2",
     "node-uuid": "1.4.7",
     "socket.io": "1.4.6"
   }
