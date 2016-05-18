@@ -24,6 +24,7 @@
   "dependencies": {
     "express": "4.13.4",
     "fs": "0.0.2",
+    "gcloud": "^0.33.0",
     "node-uuid": "1.4.7",
     "socket.io": "1.4.6"
   }

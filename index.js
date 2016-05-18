@@ -8,6 +8,9 @@ var fs = require('fs');
 
 var config = JSON.parse(fs.readFileSync('config.json'));
 
+// TODO: error handling / no database handling here...
+var database = require('./'+config.database.link);
+
 server.listen(config.port);
 
 // serve the www directory as a website
@@ -69,7 +72,7 @@ io.on('connection', function (socket) {
 
   socket.on('write-data', function(data){
     console.log('data to write '+JSON.stringify(data));
-    //database.write(data);
+    database.write(data);
   });
 
 });
