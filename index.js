@@ -3,75 +3,90 @@ var express = require('express');
 var app = express();
 var server = require('http').Server(app);
 var io = require('socket.io')(server);
-var fs = require('fs');
+
 //var database = require('./database');
-
-var config = JSON.parse(fs.readFileSync('config.json'));
-
+//var config = JSON.parse(fs.readFileSync('config.json'));
 // TODO: error handling / no database handling here...
-var database = require('./'+config.database.link);
+//var database = require('./'+config.database.link);
 
-server.listen(config.port);
-
-// serve the www directory as a website
-app.use(express.static('www'));
+// database
+var database;
 
 // rooms (simultaneous game instances)
 var rooms = {};
 
-io.on('connection', function (socket) {
+function start_webserver(port, static_directory){
 
-  socket.on('join', function(data){
-    var room = find_room(data);
-    join_room(socket, room);
-    socket.emit('join-reply', {
-      session_id: room
+  server.listen(port);
+
+  // serve the www directory as a website
+  app.use(express.static(static_directory));
+
+}
+
+function start_socket(){
+  io.on('connection', function (socket) {
+
+    socket.on('join', function(data){
+      var room = find_room(data);
+      join_room(socket, room);
+      socket.emit('join-reply', {
+        session_id: room
+      });
     });
-  });
 
-  socket.on('disconnect', function () {
-    io.to(socket.room_id).emit('end', {});
-    if(typeof socket.room_id !== 'undefined' && rooms[socket.room_id].participants() == 0){
-      destroy_room(socket.room_id);
-    }
-  });
+    socket.on('disconnect', function () {
+      io.to(socket.room_id).emit('end', {});
+      if(typeof socket.room_id !== 'undefined' && rooms[socket.room_id].participants() == 0){
+        destroy_room(socket.room_id);
+      }
+    });
 
-  socket.on('turn', function(data){
-    rooms[socket.room_id].messages.turn.push(data);
-    if(rooms[socket.room_id].messages.turn.length == rooms[socket.room_id].participants()){
-      var td = rooms[socket.room_id].messages.turn;
-      rooms[socket.room_id].messages.turn = [];
-      io.emit('turn-reply', {data: td});
-    }
-  });
+    socket.on('turn', function(data){
+      rooms[socket.room_id].messages.turn.push(data);
+      if(rooms[socket.room_id].messages.turn.length == rooms[socket.room_id].participants()){
+        var td = rooms[socket.room_id].messages.turn;
+        rooms[socket.room_id].messages.turn = [];
+        io.emit('turn-reply', {data: td});
+      }
+    });
 
-  socket.on('wait', function(){
-    rooms[socket.room_id].messages.wait++;
-    if(rooms[socket.room_id].messages.wait == rooms[socket.room_id].participants()){
-      rooms[socket.room_id].messages.wait = 0;
-      io.emit('wait-reply', {});
-    }
-  });
+    socket.on('wait', function(){
+      rooms[socket.room_id].messages.wait++;
+      if(rooms[socket.room_id].messages.wait == rooms[socket.room_id].participants()){
+        rooms[socket.room_id].messages.wait = 0;
+        io.emit('wait-reply', {});
+      }
+    });
 
-  socket.on('sync', function(data){
-    var id = data.id;
-    if(typeof rooms[socket.room_id].messages.sync[id] == 'undefined'){
-      rooms[socket.room_id].messages.sync[id] = {};
-      rooms[socket.room_id].messages.sync[id].content = data.content;
-      rooms[socket.room_id].messages.sync[id].count = 0;
-    }
-    rooms[socket.room_id].messages.sync[id].count++;
-    if(rooms[socket.room_id].messages.sync[id].count == rooms[socket.room_id].participants()){
-      io.emit('sync-reply', {id: id, content: rooms[socket.room_id].messages.sync[id].content});
-    }
-  });
+    socket.on('sync', function(data){
+      var id = data.id;
+      if(typeof rooms[socket.room_id].messages.sync[id] == 'undefined'){
+        rooms[socket.room_id].messages.sync[id] = {};
+        rooms[socket.room_id].messages.sync[id].content = data.content;
+        rooms[socket.room_id].messages.sync[id].count = 0;
+      }
+      rooms[socket.room_id].messages.sync[id].count++;
+      if(rooms[socket.room_id].messages.sync[id].count == rooms[socket.room_id].participants()){
+        io.emit('sync-reply', {id: id, content: rooms[socket.room_id].messages.sync[id].content});
+      }
+    });
 
-  socket.on('write-data', function(data){
-    console.log('data to write '+JSON.stringify(data));
-    database.write(data);
-  });
+    socket.on('write-data', function(data){
+      if(typeof database !== 'undefined'){
+        database.write(data);
+      } else {
+        console.log('Warning: no database connected');
+      }
+    });
 
-});
+  });
+}
+
+function init_database(link_object, opts){
+  database = link_object;
+  database.connect(opts);
+}
 
 function find_room(data){
 
@@ -197,4 +212,22 @@ function join_room(socket, room_to_join) {
 
 function destroy_room(id) {
   delete rooms[id];
+}
+
+module.exports = {
+
+  start: function(opts){
+
+    start_webserver(opts.port, opts.static_directory);
+
+    start_socket();
+
+    if(typeof opts.database !== 'undefined'){
+      if(typeof opts.database.connect === 'function' && typeof opts.database.write === 'function'){
+        init_database(opts.database);
+      }
+    }
+
+  }
+
 }
