@@ -21,11 +21,8 @@ var rooms = {};
 
 io.on('connection', function (socket) {
 
-  console.log('Client connected!');
-
   socket.on('join', function(data){
     var room = find_room(data);
-    console.log('Client joined room '+room);
     join_room(socket, room);
     socket.emit('join-reply', {
       session_id: room
@@ -33,7 +30,6 @@ io.on('connection', function (socket) {
   });
 
   socket.on('disconnect', function () {
-    console.log('Client disconnected.');
     io.to(socket.room_id).emit('end', {});
     if(typeof socket.room_id !== 'undefined' && rooms[socket.room_id].participants() == 0){
       destroy_room(socket.room_id);
@@ -143,9 +139,7 @@ function create_room(id, experiment_id, total_participants){
     client.join(this.id);
     client.room_id = this.id;
     this.update_all();
-    console.log(this.participants() + ' of ' + this.total_participants + ' ready in room '+this.id);
     if(this.participants() == this.total_participants){
-      console.log('Confirming room '+this.id);
       this.confirm_ready();
     }
   };
@@ -202,7 +196,5 @@ function join_room(socket, room_to_join) {
 }
 
 function destroy_room(id) {
-  console.log('Removing room '+id);
   delete rooms[id];
-  console.log('Removed a room. Current rooms: '+JSON.stringify(Object.keys(rooms)));
 }
