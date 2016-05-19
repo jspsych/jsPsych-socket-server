@@ -80,6 +80,8 @@ function start_socket(){
       }
     });
 
+    socket.emit('connection-reply', {});
+
   });
 }
 
@@ -182,10 +184,10 @@ function create_room(id, experiment_id, total_participants){
       io.sockets.connected[c].ready_id = idx;
       idx++;
       io.sockets.connected[c].once('ready-reply', function(message){
-        this.messages.ready.push(message.id);
-        if(this.messages.ready.length == this.total_participants){
+        room.messages.ready.push(message.id);
+        if(room.messages.ready.length == room.total_participants){
           // TODO: end timeout here
-          this.start();
+          room.start();
         }
       });
       io.sockets.connected[c].emit('ready', {id: io.sockets.connected[c].ready_id});
@@ -224,7 +226,7 @@ module.exports = {
 
     if(typeof opts.database !== 'undefined'){
       if(typeof opts.database.connect === 'function' && typeof opts.database.write === 'function'){
-        init_database(opts.database);
+        init_database(opts.database, opts.database_config);
       }
     }
 
