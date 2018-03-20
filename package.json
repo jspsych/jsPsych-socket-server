@@ -4,7 +4,7 @@
   "description": "A socket.io based server for running jsPsych experiments",
   "main": "server/index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "jest"
   },
   "repository": {
     "type": "git",
@@ -22,9 +22,9 @@
   },
   "homepage": "https://github.com/jspsych/jsPsych-socket-server#readme",
   "dependencies": {
-    "express": "4.13.4",
-    "gcloud": "^0.33.0",
-    "node-uuid": "1.4.7",
-    "socket.io": "1.4.6"
+    "express": "^4.16.3",
+    "jest": "^22.4.2",
+    "socket.io": "^2.0.4",
+    "uuid": "^3.2.1"
   }
 }
