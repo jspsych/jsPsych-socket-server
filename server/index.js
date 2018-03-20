@@ -25,6 +25,7 @@ function start_webserver(port, static_directory){
 }
 
 function start_socket(){
+
   io.on('connection', function (socket) {
 
     socket.on('join', function(data){

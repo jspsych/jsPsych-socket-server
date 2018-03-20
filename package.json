@@ -1,14 +1,14 @@
 {
-  "name": "jspsych-node-server",
+  "name": "jspsych-socket-server",
   "version": "0.0.0",
-  "description": "A server for running jsPsych experiments",
-  "main": "index.js",
+  "description": "A socket.io based server for running jsPsych experiments",
+  "main": "server/index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/jspsych/jsPsych-node-server.git"
+    "url": "git+https://github.com/jspsych/jsPsych-socket-server.git"
   },
   "keywords": [
     "jsPsych",
@@ -16,11 +16,11 @@
     "science"
   ],
   "author": "Josh de Leeuw",
-  "license": "ISC",
+  "license": "MIT",
   "bugs": {
-    "url": "https://github.com/jspsych/jsPsych-node-server/issues"
+    "url": "https://github.com/jspsych/jsPsych-socket-server/issues"
   },
-  "homepage": "https://github.com/jspsych/jsPsych-node-server#readme",
+  "homepage": "https://github.com/jspsych/jsPsych-socket-server#readme",
   "dependencies": {
     "express": "4.13.4",
     "gcloud": "^0.33.0",
