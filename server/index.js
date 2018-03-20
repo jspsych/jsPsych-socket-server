@@ -187,10 +187,19 @@ function create_room(experiment_id, total_participants){
   room.confirm_ready = function() {
     var ready_count = 0;
     var clients = io.in(this.id).connected;
+    /*var abort_timeout = setTimeout(()=>{
+      this.abort_start();
+    }, 5000);*/
     for(var id in clients){
+
+      clients[id].confirmed_ready = false;
+      console.log(id);
       clients[id].once('ready-reply', () => {
         ready_count++;
+        clients[id].confirmed_ready = true;
+        console.log('ready-reply' + id);
         if(ready_count == this.total_participants){
+          clearTimeout(abort_timeout);
           this.start();
         }
       });
@@ -206,6 +215,18 @@ function create_room(experiment_id, total_participants){
       clients[id].player_id = idx;
       idx++;
       io.to(id).emit('start', {player_id: clients[id].player_id});
+    }
+  }
+
+  room.abort_start = function(){
+    console.log('aborting start');
+    io.to(this.id).emit('ready-abort');
+    var clients = io.in(this.id).connected;
+    for(var id in clients){
+      if(!clients[id].confirmed_ready){
+        clients[id].leave(this.id);
+        room.leave();
+      }
     }
   }
 
