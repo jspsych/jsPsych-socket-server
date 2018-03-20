@@ -113,6 +113,4 @@ describe('joining a room', function(){
     client1.emit('join', {experiment_id: 'test', participants: 2});
   });
 
-
-
 });

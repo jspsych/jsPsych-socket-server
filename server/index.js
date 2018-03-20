@@ -41,14 +41,18 @@ function start_socket(){
         session_id: room.id
       });
     });
-/*
+
     socket.on('disconnect', function () {
-      io.to(socket.room_id).emit('end', {});
-      if(typeof socket.room_id !== 'undefined' && rooms[socket.room_id].participants() == 0){
-        destroy_room(socket.room_id);
+      if(typeof socket.room !== 'undefined'){
+        socket.room.leave()
       }
+      //io.to(socket.room_id).emit('end', {});
+      /*if(typeof socket.room_id !== 'undefined' && rooms[socket.room_id].participants() == 0){
+        destroy_room(socket.room_id);
+      }*/
     });
 
+/*
     socket.on('turn', function(data){
       rooms[socket.room_id].messages.turn.push(data);
       if(rooms[socket.room_id].messages.turn.length == rooms[socket.room_id].participants()){
@@ -153,22 +157,26 @@ function create_room(experiment_id, total_participants){
       return false;
     }
     client.join(this.id);
-    client.room_id = this.id;
+    client.room = this;
+
+    this.update();
     /*
-    this.update_all();
     if(this.participants() == this.total_participants){
       this.confirm_ready();
     }
     */
     return true;
   };
-/*
+
   // called if someone disconnects
-  room.leave = function() {
-    this.update_all();
+  room.leave = function(client) {
+    // leaving the room is automatic when client disconnects,
+    // this method just handles any residual consequences of
+    // leaving.
+    this.update();
   }
 
-  room.update_all = function(){
+  room.update = function(){
     var n_participants = this.participants();
     io.to(this.id).emit('room-update', {
       participants: n_participants
@@ -206,12 +214,8 @@ function create_room(experiment_id, total_participants){
       io.sockets.connected[c].emit('start', {player_id: io.sockets.connected[c].player_id});
     }
   }
-*/
-  return room;
-}
 
-function join_room(socket, room_to_join) {
-  rooms[room_to_join].join(socket);
+  return room;
 }
 
 function destroy_room(id) {
