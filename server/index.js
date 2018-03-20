@@ -160,11 +160,11 @@ function create_room(experiment_id, total_participants){
     client.room = this;
 
     this.update();
-    /*
+
+    // when room is full, get confirmation from everyone that session can start
     if(this.participants() == this.total_participants){
       this.confirm_ready();
     }
-    */
     return true;
   };
 
@@ -176,6 +176,7 @@ function create_room(experiment_id, total_participants){
     this.update();
   }
 
+  // updates each client with the number of currently connected participants
   room.update = function(){
     var n_participants = this.participants();
     io.to(this.id).emit('room-update', {
@@ -184,34 +185,27 @@ function create_room(experiment_id, total_participants){
   }
 
   room.confirm_ready = function() {
-    this.messages.ready = []; // clear the ready message holder
-    var clients = io.nsps['/'].adapter.rooms[this.id].sockets;
-    var idx;
-
-    // TODO: set a timeout here...
-
-    for(var c in clients){
-      io.sockets.connected[c].ready_id = idx;
-      idx++;
-      io.sockets.connected[c].once('ready-reply', function(message){
-        room.messages.ready.push(message.id);
-        if(room.messages.ready.length == room.total_participants){
-          // TODO: end timeout here
-          room.start();
+    var ready_count = 0;
+    var clients = io.in(this.id).connected;
+    for(var id in clients){
+      clients[id].once('ready-reply', () => {
+        ready_count++;
+        if(ready_count == this.total_participants){
+          this.start();
         }
       });
-      io.sockets.connected[c].emit('ready', {id: io.sockets.connected[c].ready_id});
     }
+    io.to(this.id).emit('ready-check', {});
   };
 
   room.start = function(){
     this.started = true;
-    var clients = io.nsps['/'].adapter.rooms[this.id].sockets;
+    var clients = io.in(this.id).connected;
     var idx = 0;
-    for(var c in clients){
-      io.sockets.connected[c].player_id = idx;
+    for(var id in clients){
+      clients[id].player_id = idx;
       idx++;
-      io.sockets.connected[c].emit('start', {player_id: io.sockets.connected[c].player_id});
+      io.to(id).emit('start', {player_id: clients[id].player_id});
     }
   }
 
