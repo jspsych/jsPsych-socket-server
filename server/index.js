@@ -1,7 +1,7 @@
-var uuid = require('node-uuid');
+var uuid = require('uuid');
 var express = require('express');
 var app = express();
-var server = require('http').Server(app);
+var server = require('http').createServer(app);
 var io = require('socket.io')(server);
 
 //var database = require('./database');
@@ -9,19 +9,26 @@ var io = require('socket.io')(server);
 // TODO: error handling / no database handling here...
 //var database = require('./'+config.database.link);
 
+// defaults
+const DEFAULT_PORT = 8080;
+
 // database
 var database;
 
 // rooms (simultaneous game instances)
-var rooms = {};
+var rooms = [];
 
-function start_webserver(port, static_directory){
-
+function start_webserver(data){
+  var port = data.port || DEFAULT_PORT; // use default value if none specified
   server.listen(port);
+  if(typeof data.directory !== 'undefined'){
+    // serve the www directory as a website
+    app.use(express.static(data.directory));
+  }
+}
 
-  // serve the www directory as a website
-  app.use(express.static(static_directory));
-
+function stop_webserver(){
+  server.close();
 }
 
 function start_socket(){
@@ -29,13 +36,12 @@ function start_socket(){
   io.on('connection', function (socket) {
 
     socket.on('join', function(data){
-      var room = find_room(data);
-      join_room(socket, room);
+      var room = find_room(data.experiment_id, data.participants, socket);
       socket.emit('join-reply', {
-        session_id: room
+        session_id: room.id
       });
     });
-
+/*
     socket.on('disconnect', function () {
       io.to(socket.room_id).emit('end', {});
       if(typeof socket.room_id !== 'undefined' && rooms[socket.room_id].participants() == 0){
@@ -82,7 +88,7 @@ function start_socket(){
     });
 
     socket.emit('connection-reply', {});
-
+*/
   });
 }
 
@@ -91,44 +97,32 @@ function init_database(link_object, opts){
   database.connect(opts);
 }
 
-function find_room(data){
+function find_room(experiment_id, participants, client){
 
-  var room_to_join;
-  var room_keys = Object.keys(rooms);
+  var room;
 
-  if(room_keys.length == 0){
-    var new_room_id = uuid();
-    rooms[new_room_id] = create_room(new_room_id, data.experiment, data.participants);
-    room_to_join = new_room_id;
-  } else {
-    // first join rooms that are waiting for players
-    for(var i=0; i<room_keys.length; i++){
-      if(
-        rooms[room_keys[i]].started == false &&
-        rooms[room_keys[i]].participants() > 0 &&
-        rooms[room_keys[i]].experiment_id == data.experiment &&
-        rooms[room_keys[i]].total_participants == data.participants
-      ){
-        room_to_join = rooms[room_keys[i]].id;
-        break;
-      }
-    }
-    // then make new empty room
-    if(typeof room_to_join == 'undefined'){
-      var new_room_id = uuid();
-      rooms[new_room_id] = create_room(new_room_id, data.experiment, data.participants);
-      room_to_join = new_room_id;
+  // first join rooms that are waiting for players
+  for(var i=0; i<rooms.length; i++){
+    if(rooms[i].join(experiment_id, participants, client)){
+      room = rooms[i];
+      break;
     }
   }
+  // otherwise, create a new room and join it.
+  if(typeof room == 'undefined'){
+    var room = create_room(experiment_id, participants);
+    rooms.push(room);
+    room.join(experiment_id, participants, client);
+  }
 
-  return room_to_join;
+  return room;
 }
 
-function create_room(id, experiment_id, total_participants){
+function create_room(experiment_id, total_participants){
 
   var room = {};
 
-  room.id = id;
+  room.id = uuid();
   room.experiment_id = experiment_id;
   room.total_participants = total_participants;
   room.started = false;
@@ -152,16 +146,23 @@ function create_room(id, experiment_id, total_participants){
     }
   };
 
-  // adds client to this room
-  room.join =  function(client) {
+  // adds client to this room if space is available and experiment_id matches
+  room.join =  function(experiment_id, total_participants, client) {
+    // check if experiment has already started or if room is full
+    if(this.experiment_id !== experiment_id || total_participants !== this.total_participants || this.started || this.participants() >= this.total_participants) {
+      return false;
+    }
     client.join(this.id);
     client.room_id = this.id;
+    /*
     this.update_all();
     if(this.participants() == this.total_participants){
       this.confirm_ready();
     }
+    */
+    return true;
   };
-
+/*
   // called if someone disconnects
   room.leave = function() {
     this.update_all();
@@ -205,7 +206,7 @@ function create_room(id, experiment_id, total_participants){
       io.sockets.connected[c].emit('start', {player_id: io.sockets.connected[c].player_id});
     }
   }
-
+*/
   return room;
 }
 
@@ -220,8 +221,8 @@ function destroy_room(id) {
 module.exports = {
 
   start: function(opts){
-
-    start_webserver(opts.port, opts.static_directory);
+    opts = opts || {};
+    start_webserver(opts);
 
     start_socket();
 
@@ -231,6 +232,10 @@ module.exports = {
       }
     }
 
+  },
+
+  stop: function(){
+    stop_webserver();
   }
 
 }
