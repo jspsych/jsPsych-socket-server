@@ -3,7 +3,7 @@ var io = require('socket.io-client');
 
 const SERVER_URL = 'http://localhost:8080';
 
-jest.useFakeTimers();
+//jest.useFakeTimers();
 
 beforeAll(function(){
   server.start();
@@ -15,22 +15,25 @@ afterAll(function(){
 
 describe('joining a room', function(){
 
-  test.only('confirmation process works when everyone behaves', function(done){
+  test('confirmation process works when everyone behaves', function(done){
+
+    jest.useRealTimers();
+
     var client1 = io.connect(SERVER_URL);
     var client2 = io.connect(SERVER_URL);
 
-    client1.on('join-reply', function(data){
-      client2.emit('join', {experiment_id: 'test', participants: 2});
-    });
-
     client1.on('ready-check', function(data){
-      console.log('client 1 ready check')
-      client1.emit('ready-reply');
+      console.log('client 1 ready check');
+      setTimeout(function(){
+        client1.emit('ready-reply', {which: 1});
+      }, 100);
     })
 
     client2.on('ready-check', function(data){
-      console.log('client 2 ready check')
-      client2.emit('ready-reply');
+      console.log('client 2 ready check');
+      setTimeout(function(){
+        client2.emit('ready-reply', {which: 2});
+      }, 200);
     })
 
     client1.on('start', function(data){
@@ -40,16 +43,16 @@ describe('joining a room', function(){
     });
 
     client1.emit('join', {experiment_id: 'test', participants: 2});
+    client2.emit('join', {experiment_id: 'test', participants: 2});
 
-  }, 1000);
+  }, 2000);
 
   test('abort when one client fails to ready-reply', function(done){
+
+    jest.useFakeTimers();
+
     var client1 = io.connect(SERVER_URL);
     var client2 = io.connect(SERVER_URL);
-
-    client1.on('join-reply', function(data){
-      client2.emit('join', {experiment_id: 'test', participants: 2});
-    });
 
     client1.on('ready-check', function(data){
       client1.emit('ready-reply');
@@ -67,6 +70,11 @@ describe('joining a room', function(){
     });
 
     client1.emit('join', {experiment_id: 'test', participants: 2});
+    client2.emit('join', {experiment_id: 'test', participants: 2});
+
+
   },1000);
 
 });
+
+// TODO: add test to confirm that room state is correct after aborting.

@@ -3,17 +3,18 @@ var io = require('socket.io-client');
 
 const SERVER_URL = 'http://localhost:8080';
 
-describe('room updates', function(){
+beforeAll(function(){
+  server.start();
+});
 
-  beforeAll(function(){
-    server.start();
-  });
+afterAll(function(){
+  server.stop();
+});
 
-  afterAll(function(){
-    server.stop();
-  });
 
-  test('room-update message received when new member joins', function(done){
+describe('session updates', function(){
+
+  test('session-update message received when new member joins', function(done){
 
     var client1 = io.connect(SERVER_URL);
     var client2 = io.connect(SERVER_URL);
@@ -23,7 +24,7 @@ describe('room updates', function(){
     });
 
     var first_msg = true;
-    client1.on('room-update', function(data){
+    client1.on('session-update', function(data){
       if(first_msg){
         expect(data.participants).toBe(1);
         first_msg = false;
@@ -39,7 +40,7 @@ describe('room updates', function(){
 
   });
 
-  test('room-update message received when member leaves', function(done){
+  test('session-update message received when member leaves', function(done){
 
     var client1 = io.connect(SERVER_URL);
     var client2 = io.connect(SERVER_URL);
@@ -49,7 +50,7 @@ describe('room updates', function(){
     });
 
     var msg = 1;
-    client1.on('room-update', function(data){
+    client1.on('session-update', function(data){
       if(msg == 1){
         msg++;
       } else if(msg == 2) {

@@ -4,7 +4,7 @@
   "description": "A socket.io based server for running jsPsych experiments",
   "main": "server/index.js",
   "scripts": {
-    "test": "jest"
+    "test": "jest --runInBand"
   },
   "repository": {
     "type": "git",

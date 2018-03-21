@@ -106,11 +106,11 @@ describe('joining a room', function(){
           client3.disconnect();
           done();
         });
-        client3.emit('join', {experiment_id: 'test', participants: 2});
+        client3.emit('join', {experiment_id: 'testA', participants: 2});
       });
-      client2.emit('join', {experiment_id: 'test', participants: 2});
+      client2.emit('join', {experiment_id: 'testA', participants: 2});
     });
-    client1.emit('join', {experiment_id: 'test', participants: 2});
+    client1.emit('join', {experiment_id: 'testA', participants: 2});
   });
 
 });
