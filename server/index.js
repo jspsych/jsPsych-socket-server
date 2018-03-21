@@ -50,7 +50,6 @@ function start_socketserver(){
 
     socket.on('ready-reply', function (data) {
       console.log('ready-reply');
-      console.log(data.which);
       if(typeof socket.session !== 'undefined'){
         socket.session.client_ready(socket);
       }
@@ -151,10 +150,18 @@ function create_session(experiment_id, total_participants){
     }
   };
 
+  // returns client ids in this session
+  session.client_ids = function(){
+    if(typeof io.sockets.adapter.rooms[this.id] == 'undefined'){
+      return [];
+    } else {
+      return Object.keys(io.sockets.adapter.rooms[this.id].sockets);
+    }
+  }
+
   // adds client to this session if space is available and experiment_id matches
   session.join =  function(experiment_id, total_participants, client) {
     // check if experiment has already started or if session is full
-    debugger;
     if(this.experiment_id !== experiment_id || total_participants !== this.total_participants || this.started || this.participants() >= this.total_participants) {
       return false;
     }
@@ -189,12 +196,17 @@ function create_session(experiment_id, total_participants){
   session.confirm_ready = function() {
     // reset ready counter
     this.messages.ready = 0;
+    // reset status of all clients
+    var clients = io.in(this.id).connected;
+    for(var id in clients){
+      clients[id].confirmed_ready = false;
+    }
     // send ready-check messages to all clients
     io.to(this.id).emit('ready-check', {});
     // set timeout to abort ready process after Xms
     setTimeout(()=>{
       this.abort_start();
-    },5000);
+    },500);
   };
 
   session.client_ready = function(client) {
@@ -220,13 +232,21 @@ function create_session(experiment_id, total_participants){
   }
 
   session.abort_start = function(){
+    // if session has started, there's no need for this abort.
     if(this.started){ return; }
     console.log('aborting start');
+    // ready-abort message alerts subjects that startup failed.
     io.to(this.id).emit('ready-abort');
+    // check which clients failed to submit ready-reply
+    // remove them from room so new clients can join
     var clients = io.in(this.id).connected;
     for(var id in clients){
       if(!clients[id].confirmed_ready){
+        // send client a message that it was kicked out
+        io.to(id).emit('kicked', {reason: 'ready-reply-fail'});
+        // this removes the client from this room <socket.io>
         clients[id].leave(this.id);
+        // this removes the client from this session
         session.leave();
       }
     }
@@ -258,5 +278,8 @@ module.exports = {
   stop: function(){
     stop_webserver();
   }
+}
 
+if(typeof __TEST__ !== 'undefined' && __TEST__){
+  module.exports._sessions = sessions;
 }

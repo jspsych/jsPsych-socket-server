@@ -6,6 +6,11 @@
   "scripts": {
     "test": "jest --runInBand"
   },
+  "jest": {
+    "globals": {
+      "__TEST__": true
+    }
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/jspsych/jsPsych-socket-server.git"

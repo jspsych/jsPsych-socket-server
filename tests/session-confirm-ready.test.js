@@ -13,7 +13,7 @@ afterAll(function(){
   server.stop();
 });
 
-describe('joining a room', function(){
+describe('confirming session can start', function(){
 
   test('confirmation process works when everyone behaves', function(done){
 
@@ -42,8 +42,8 @@ describe('joining a room', function(){
       done();
     });
 
-    client1.emit('join', {experiment_id: 'test', participants: 2});
-    client2.emit('join', {experiment_id: 'test', participants: 2});
+    client1.emit('join', {experiment_id: 'test-11', participants: 2});
+    client2.emit('join', {experiment_id: 'test-11', participants: 2});
 
   }, 2000);
 
@@ -53,6 +53,12 @@ describe('joining a room', function(){
 
     var client1 = io.connect(SERVER_URL);
     var client2 = io.connect(SERVER_URL);
+
+    var session_id;
+
+    client1.on('join-reply', function(data){
+      session_id = data.session_id;
+    })
 
     client1.on('ready-check', function(data){
       client1.emit('ready-reply');
@@ -64,17 +70,61 @@ describe('joining a room', function(){
     })
 
     client1.on('ready-abort', function(data){
+      for(var i in server._sessions){
+        if(server._sessions[i].id == session_id){
+          expect(server._sessions[i].participants()).toBe(1);
+        }
+      }
       client1.disconnect();
       client2.disconnect();
       done();
     });
 
-    client1.emit('join', {experiment_id: 'test', participants: 2});
-    client2.emit('join', {experiment_id: 'test', participants: 2});
+    client1.emit('join', {experiment_id: 'test-12', participants: 2});
+    client2.emit('join', {experiment_id: 'test-12', participants: 2});
 
 
-  },1000);
+  });
+
+  test.only('check that client gets kicked message when fails to ready-reply', function(done){
+
+    jest.useRealTimers();
+
+    var client1 = io.connect(SERVER_URL);
+    var client2 = io.connect(SERVER_URL);
+
+    var session_id;
+
+    client1.on('join-reply', function(data){
+      session_id = data.session_id;
+    });
+
+    client1.on('ready-check', function(data){
+      client1.emit('ready-reply');
+      //jest.advanceTimersByTime(8000);
+    });
+
+    client2.on('ready-check', function(data){
+      // do nothing...
+    });
+
+    client2.on('kicked', function(data){
+      expect(data.reason).toBe('ready-reply-fail');
+      for(var i in server._sessions){
+        if(server._sessions[i].id == session_id){
+          expect(server._sessions[i].client_ids()).toContain(client1.id);
+          expect(server._sessions[i].client_ids()).not.toContain(client2.id);
+        }
+      }
+      client1.disconnect();
+      client2.disconnect();
+      done();
+    });
+
+    client1.emit('join', {experiment_id: 'test-103', participants: 2});
+    client2.emit('join', {experiment_id: 'test-103', participants: 2});
+
+
+  });
 
 });
-
-// TODO: add test to confirm that room state is correct after aborting.
