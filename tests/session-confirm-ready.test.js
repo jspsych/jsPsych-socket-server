@@ -23,14 +23,12 @@ describe('confirming session can start', function(){
     var client2 = io.connect(SERVER_URL);
 
     client1.on('ready-check', function(data){
-      console.log('client 1 ready check');
       setTimeout(function(){
         client1.emit('ready-reply', {which: 1});
       }, 100);
     })
 
     client2.on('ready-check', function(data){
-      console.log('client 2 ready check');
       setTimeout(function(){
         client2.emit('ready-reply', {which: 2});
       }, 200);
@@ -49,7 +47,7 @@ describe('confirming session can start', function(){
 
   test('abort when one client fails to ready-reply', function(done){
 
-    jest.useFakeTimers();
+    //jest.useFakeTimers();
 
     var client1 = io.connect(SERVER_URL);
     var client2 = io.connect(SERVER_URL);
@@ -65,8 +63,7 @@ describe('confirming session can start', function(){
     })
 
     client2.on('ready-check', function(data){
-      //client2.emit('ready-reply');
-      jest.advanceTimersByTime(8000);
+      // do nothing
     })
 
     client1.on('ready-abort', function(data){
@@ -86,7 +83,7 @@ describe('confirming session can start', function(){
 
   });
 
-  test.only('check that client gets kicked message when fails to ready-reply', function(done){
+  test('check that client gets kicked message when fails to ready-reply', function(done){
 
     jest.useRealTimers();
 

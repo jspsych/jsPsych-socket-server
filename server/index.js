@@ -11,6 +11,7 @@ var io = require('socket.io')(server);
 
 // defaults
 const DEFAULT_PORT = 8080;
+const READY_TIMEOUT = (typeof __TEST__ !== 'undefined' && __TEST__) ? 500 : 10000;
 
 // database
 var database;
@@ -49,7 +50,6 @@ function start_socketserver(){
     });
 
     socket.on('ready-reply', function (data) {
-      console.log('ready-reply');
       if(typeof socket.session !== 'undefined'){
         socket.session.client_ready(socket);
       }
@@ -206,11 +206,10 @@ function create_session(experiment_id, total_participants){
     // set timeout to abort ready process after Xms
     setTimeout(()=>{
       this.abort_start();
-    },500);
+    }, READY_TIMEOUT);
   };
 
   session.client_ready = function(client) {
-    console.log('client ready.');
     if(!client.confirmed_ready){
       this.messages.ready++;
       client.confirmed_ready = true;
@@ -234,7 +233,6 @@ function create_session(experiment_id, total_participants){
   session.abort_start = function(){
     // if session has started, there's no need for this abort.
     if(this.started){ return; }
-    console.log('aborting start');
     // ready-abort message alerts subjects that startup failed.
     io.to(this.id).emit('ready-abort');
     // check which clients failed to submit ready-reply
