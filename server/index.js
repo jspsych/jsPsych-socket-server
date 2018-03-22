@@ -1,4 +1,5 @@
 var uuid = require('uuid');
+var clone = require('clone');
 var express = require('express');
 var app = express();
 var server = require('http').createServer(app);
@@ -69,17 +70,27 @@ function start_socketserver(){
       }
     });
 
-/*
+
     socket.on('turn', function(data){
-      sessions[socket.session_id].messages.turn.push(data);
-      if(sessions[socket.session_id].messages.turn.length == sessions[socket.session_id].participants()){
-        var td = sessions[socket.session_id].messages.turn;
-        sessions[socket.session_id].messages.turn = [];
+      if(typeof socket.session == 'undefined'){
+        return;
+      }
+      var turn = socket.session.messages.turn;
+      if(typeof turn[socket.player_id] == 'undefined'){
+        turn[socket.player_id] = {player_id: socket.player_id, turn_data: data}
+      }
+      var done = true;
+      for(var i=0; i<socket.session.participants(); i++){
+        if(typeof turn[i] == 'undefined') { done = false; break; }
+      }
+      if(done){
+        var td = clone(turn);
+        turn = [];
         io.emit('turn-reply', {data: td});
       }
     });
 
-
+/*
 
     socket.on('sync', function(data){
       var id = data.id;
