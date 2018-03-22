@@ -24,13 +24,13 @@ describe('confirming session can start', function(){
 
     client1.on('ready-check', function(data){
       setTimeout(function(){
-        client1.emit('ready-reply', {which: 1});
+        client1.emit('ready-reply');
       }, 100);
     })
 
     client2.on('ready-check', function(data){
       setTimeout(function(){
-        client2.emit('ready-reply', {which: 2});
+        client2.emit('ready-reply');
       }, 200);
     })
 

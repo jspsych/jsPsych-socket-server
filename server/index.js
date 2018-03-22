@@ -55,6 +55,20 @@ function start_socketserver(){
       }
     });
 
+    socket.on('wait', function(){
+      if(typeof socket.session == 'undefined'){
+        return;
+      }
+      var wait = socket.session.messages.wait;
+      if(!wait.includes(socket.id)){
+        wait.push(socket.id);
+        if(wait.length == socket.session.participants()){
+          wait = [];
+          io.to(socket.session.id).emit('wait-reply', {});
+        }
+      }
+    });
+
 /*
     socket.on('turn', function(data){
       sessions[socket.session_id].messages.turn.push(data);
@@ -65,13 +79,7 @@ function start_socketserver(){
       }
     });
 
-    socket.on('wait', function(){
-      sessions[socket.session_id].messages.wait++;
-      if(sessions[socket.session_id].messages.wait == sessions[socket.session_id].participants()){
-        sessions[socket.session_id].messages.wait = 0;
-        io.emit('wait-reply', {});
-      }
-    });
+
 
     socket.on('sync', function(data){
       var id = data.id;
@@ -136,7 +144,7 @@ function create_session(experiment_id, total_participants){
 
   session.messages = {
     turn: [],
-    wait: 0,
+    wait: [],
     sync: {},
     ready: 0
   }
