@@ -90,21 +90,26 @@ function start_socketserver(){
       }
     });
 
-/*
-
     socket.on('sync', function(data){
-      var id = data.id;
-      if(typeof sessions[socket.session_id].messages.sync[id] == 'undefined'){
-        sessions[socket.session_id].messages.sync[id] = {};
-        sessions[socket.session_id].messages.sync[id].content = data.content;
-        sessions[socket.session_id].messages.sync[id].count = 0;
+      if(typeof socket.session == 'undefined'){
+        return;
       }
-      sessions[socket.session_id].messages.sync[id].count++;
-      if(sessions[socket.session_id].messages.sync[id].count == sessions[socket.session_id].participants()){
-        io.emit('sync-reply', {id: id, content: sessions[socket.session_id].messages.sync[id].content});
+      var sync = socket.session.messages.sync;
+      if(typeof sync[socket.player_id] == 'undefined'){
+        sync[socket.player_id] = {player_id: socket.player_id, sync_data: data}
+      }
+      var done = true;
+      for(var i=0; i<socket.session.participants(); i++){
+        if(typeof sync[i] == 'undefined') { done = false; break; }
+      }
+      if(done){
+        var random_index = Math.floor(Math.random()*socket.session.participants());
+        var sync_message = clone(sync[random_index]);
+        sync = [];
+        io.emit('sync-reply', sync_message);
       }
     });
-
+/*
     socket.on('write-data', function(data){
       if(typeof database !== 'undefined'){
         database.write(data);
@@ -156,7 +161,7 @@ function create_session(experiment_id, total_participants){
   session.messages = {
     turn: [],
     wait: [],
-    sync: {},
+    sync: [],
     ready: 0
   }
 
