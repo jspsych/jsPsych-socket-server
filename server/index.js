@@ -251,7 +251,6 @@ function create_session(experiment_id, total_participants){
   }
 
   session.start = function(){
-    console.log('session start!');
     this.started = true;
     var clients = io.in(this.id).connected;
     var idx = 0;
