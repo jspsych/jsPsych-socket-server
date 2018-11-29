@@ -44,9 +44,17 @@ function start_socketserver(){
       });
     });
 
+    // disconnect is for automatic disconnects like closing the browser window
     socket.on('disconnect', function () {
       if(typeof socket.session !== 'undefined'){
         socket.session.leave()
+      }
+    });
+
+    // leave is for manual disconnects triggered by the client for whatever reason
+    socket.on('leave', function(){
+      if(typeof socket.session !== 'undefined'){
+        socket.session.leave();
       }
     });
 
