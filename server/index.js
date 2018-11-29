@@ -14,17 +14,17 @@ var io = require('socket.io')(server);
 const DEFAULT_PORT = 8080;
 const READY_TIMEOUT = (typeof __TEST__ !== 'undefined' && __TEST__) ? 500 : 10000;
 
-// database
+// database interface
 var database;
 
-// sessions (simultaneous game instances)
+// sessions (simultaneous experiment instances)
 var sessions = [];
 
 function start_webserver(data){
   var port = data.port || DEFAULT_PORT; // use default value if none specified
   server.listen(port);
+  // serve the given directory as a static website
   if(typeof data.directory !== 'undefined'){
-    // serve the www directory as a website
     app.use(express.static(data.directory));
   }
 }
@@ -86,7 +86,7 @@ function start_socketserver(){
       if(done){
         var td = clone(turn);
         turn = [];
-        io.emit('turn-reply', {data: td});
+        io.to(socket.session.id).emit('turn-reply', {data: td});
       }
     });
 
@@ -106,8 +106,15 @@ function start_socketserver(){
         var random_index = Math.floor(Math.random()*socket.session.participants());
         var sync_message = clone(sync[random_index]);
         sync = [];
-        io.emit('sync-reply', sync_message);
+        io.to(socket.session.id).emit('sync-reply', sync_message);
       }
+    });
+
+    socket.on('push', function(data){
+      if(typeof socket.session == 'undefined'){
+        return;
+      }
+      io.to(socket.session.id).emit('push-reply', data);
     });
 /*
     socket.on('write-data', function(data){
@@ -244,13 +251,14 @@ function create_session(experiment_id, total_participants){
   }
 
   session.start = function(){
+    console.log('session start!');
     this.started = true;
     var clients = io.in(this.id).connected;
     var idx = 0;
     for(var id in clients){
       clients[id].player_id = idx;
       idx++;
-      io.to(id).emit('start', {player_id: clients[id].player_id});
+      clients[id].emit('start', {player_id: clients[id].player_id});
     }
   }
 
@@ -302,6 +310,7 @@ module.exports = {
   }
 }
 
+// expose sessions in module if we are in test environment
 if(typeof __TEST__ !== 'undefined' && __TEST__){
   module.exports._sessions = sessions;
 }
