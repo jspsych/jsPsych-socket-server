@@ -1,4 +1,4 @@
-var server = require('../server');
+var server = require('../../server');
 var io = require('socket.io-client');
 
 const SERVER_URL = 'http://localhost:8080';
