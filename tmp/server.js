@@ -364,7 +364,8 @@ class NetStation {
     }
 
     async sync(timestamp=null) {
-        if (await sendAttenionCommand() && await sendLocalTime(timestamp)) {
+        let ack = await Promise.all([this.sendAttenionCommand(), this.sendLocalTime()])
+        if (ack[0] && ack[1]) {
             return true;
         }
         throw new EgiError("sync command failed!")
