@@ -1,11 +1,12 @@
 const net = require('net');
+const struct = require("python-struct");
 const {
     jsPack,
+    jsPackCalcSize,
     msLocalTimeFromToday,
     myTypeof,
     lstrip
 } = require('./utils.js');
-const struct = require("python-struct");
 
 class EgiError extends Error {
     constructor(message) {
@@ -60,7 +61,7 @@ class _Format {
     }
 
     formatLength(key) {
-        return struct.sizeOf(this._get(key));
+        return jsPackCalcSize(this._get(key));
     }
 
     pack(key, ...args) {
@@ -83,7 +84,12 @@ function _cat(...strings) {
 //pack 's' as a single-byte-counter Pascal string
 function _pstring(s) {
     if (!s) return '';
-    return struct.pack(`${s.length + 1}p`, [s]);
+    if (s.length > 255) throw new EgiError("Max Length for Pascal String is 255");
+    let total = s.length + 1;
+    let buffer = Buffer.alloc(total);
+    buffer.writeUInt8(s.length);
+    buffer.write(s, 1);
+    return buffer.toString();
 }
 
 class _DataFormat {
@@ -103,7 +109,7 @@ class _DataFormat {
             length = data.length;
             dataStr = data;
         } else {
-            length = struct.sizeOf(hints[1]);
+            length = jsPackCalcSize(hints[1]);
             dataStr = jsPack(hints[1], data);
         }
         let lengthStr = jsPack('=H', length);

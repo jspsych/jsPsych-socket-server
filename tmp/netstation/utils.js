@@ -31,15 +31,20 @@ function _toBytes(num, size = undefined, isLE = true) {
     return buffer;
 }
 
+const _FORMAT_BYTE_SIZE_MAP = {
+    // [size, isUnsigned]
+    'L': [4, true],
+    'l': [4, false],
+    'H': [2, true],
+    'h': [2, false],
+    'B': [1, true],
+    '?': [1, false],
+    's': [1, false],
+    'c': [1, false],
+    'd': [8, true],
+}
+
 function _writeToBuffer(fmt, data, isLE = _isSysLE()) {
-    let _map = {
-        'L': [4, true],
-        'l': [4, false],
-        'H': [2, true],
-        'h': [2, false],
-        'B': [1, true],
-        '?': [1, false],
-    }
     let buffer, size, isUnsigned;
     switch(fmt) {
         case 's':
@@ -59,7 +64,7 @@ function _writeToBuffer(fmt, data, isLE = _isSysLE()) {
         case 'h':
         case 'B':
         case '?':
-            [size, isUnsigned] = _map[fmt];
+            [size, isUnsigned] = _FORMAT_BYTE_SIZE_MAP[fmt];
             buffer = Buffer.alloc(size);
             let bytes = _toBytes(data, size, isLE);
             for (let i = 0; i < size; i++) {
@@ -76,36 +81,60 @@ function _isDigit(c) {
     return !isNaN(parseInt(c));
 }
 
+function jsPackCalcSize(fmt) {
+    let res = 0, i = 0;
+    while (i < fmt.length) {
+        let j = i, n = 0;
+        while (j < fmt.length) {
+            let c = fmt.charAt(j);
+            if (!_isDigit(c)) break;
+            n = n * 10 + parseInt(c);
+            j++;
+        }
+        if (j >= fmt.length) throw new EgiError('format not correct');
+        if (!n) n = 1;
+        res += n * ((_FORMAT_BYTE_SIZE_MAP[fmt.charAt(j)] && _FORMAT_BYTE_SIZE_MAP[fmt.charAt(j)][0]) || 0);
+
+        i = j + 1;
+    }
+    return res;
+}
+
 function jsPack(key, ...args) {
-    if (!key) return '';
-    let isLE = undefined;
-    let i = 0;
-    let buffer = Buffer.alloc(0);
-    switch(key.charAt(i)) {
-        case '@':
-        case '=':
-            isLE = _isSysLE();
-            break;
-        case '<':
-            isLE = true;
-            break;
-        case '!':
-        case '>':
-            isLE = false;
-            break;
-        default:
-            break;
+    let isLE = undefined, i = 0, buffer = Buffer.alloc(0);
+    if (key && i < key.length) {
+        switch(key.charAt(i)) {
+            case '@':
+            case '=':
+                isLE = _isSysLE();
+                break;
+            case '<':
+                isLE = true;
+                break;
+            case '!':
+            case '>':
+                isLE = false;
+                break;
+            default:
+                break;
+        }
     }
 
-    if (isLE == undefined) isLE = _isSysLE();
-    else i++;
+    if (isLE == undefined) {
+        // do not skip first
+        isLE = _isSysLE();
+    } else {
+        // first character is not format
+        i++;
+    }
 
     let di = 0;
     while (i < key.length) {
         let j = i, n = 0;
         while (j < key.length) {
-            if (!_isDigit(key.charAt(j))) break;
-            n = n * 10 + parseInt((key.charAt(j)));
+            let c = key.charAt(j);
+            if (!_isDigit(c)) break;
+            n = n * 10 + parseInt(c);
             j++;
         }
         if (j >= key.length) throw new EgiError('format not correct');
@@ -125,7 +154,7 @@ function jsPack(key, ...args) {
         i = j + 1;
     }
 
-    return buffer;
+    return buffer.toString();
 }
 
 function _getEndianessString() {
@@ -150,6 +179,7 @@ function myTypeof(o) {
 
 module.exports = {
     jsPack,
+    jsPackCalcSize,
     msLocalTimeFromToday,
     myTypeof,
     lstrip
