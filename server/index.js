@@ -139,11 +139,7 @@ function start_socketserver(){
     socket.on('egi_connect', (addr, port) => {
       let station = new NetStation({addr, port});
 
-      station.connect().then(() => {
-        socket.on('error', (error) => {
-            console.log(`EGI-Error: ${error}`);
-        });
-      
+      station.connect().then(() => {      
         socket.on('egi_beginSession', () => {
           station.beginSession()
         });
