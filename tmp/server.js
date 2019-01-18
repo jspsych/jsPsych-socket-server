@@ -1,6 +1,4 @@
-const {
-    NetStation,
-} = require('./netstation');
+const { NetStation } = require('./netstation');
 const app = require('express')();
 const server = require('http').Server(app);
 const io = require('socket.io')(server);
@@ -9,9 +7,8 @@ const DEFAULT_PORT = 53352;
 const DEFAULT_HARDWARE_PORT = 53353;
 const DEFAULT_ADDR = '127.0.0.1';
 
-
 function start({port=DEFAULT_PORT, hardwareAddr=DEFAULT_ADDR, hardwarePort=DEFAULT_HARDWARE_PORT}={}) {
-    const station = new NetStation(hardwareAddr, hardwarePort);
+    const station = new NetStation({addr: hardwareAddr, port: hardwarePort});
     station.connect().then(() => {
         server.listen(port, () => {
             console.log(`Start listening at port ${port}\r\n`);
@@ -26,13 +23,41 @@ function start({port=DEFAULT_PORT, hardwareAddr=DEFAULT_ADDR, hardwarePort=DEFAU
         io.on('connect', (client) => {
             console.log('Connected by a client.');
 
-            client.on('send_event', (data) => {
-                station.beginSession();
-            });
-
             client.on('error', (error) => {
                 console.log(error);
             });
+			
+			client.on('egi_beginSession', () => {
+				station.beginSession()
+			});
+			
+			client.on('egi_startRecording', () => {
+				station.startRecording();
+			});
+			
+			client.on('egi_endRecording', () => {
+				station.endRecording();
+			});
+			
+			client.on('egi_endSession', () => {
+				station.endSession();
+			});
+			
+			client.on('egi_sync', () => {
+				station.sync();
+			});
+			
+			client.on('egi_sendEvent', (...args) => {
+				station.sendEvent(...args);
+			})
+			
+			client.on('egi_sendAttensionCommand', () => {
+				station.sendAttensionCommand();
+			})
+			
+			client.on('egi_sendLocalTime', (timestamp=null) => {
+				station.sendLocalTime(timestamp);
+			})
         });
 
         io.on('disconnect', () => {
@@ -45,4 +70,4 @@ function start({port=DEFAULT_PORT, hardwareAddr=DEFAULT_ADDR, hardwarePort=DEFAU
     });
 }
 
-start()
+start({hardwareAddr: '10.10.10.42', hardwarePort: 55513});

@@ -1,6 +1,7 @@
 var uuid = require('uuid');
 var clone = require('clone');
 var express = require('express');
+const { NetStation } = require('../lib/netstation');
 var app = express();
 var server = require('http').createServer(app);
 var io = require('socket.io')(server);
@@ -36,7 +37,6 @@ function stop_webserver(){
 function start_socketserver(){
 
   io.on('connection', function (socket) {
-
     socket.on('join', function(data){
       var session = find_session(data.experiment_id, data.participants, socket);
       socket.emit('join-reply', {
@@ -135,6 +135,48 @@ function start_socketserver(){
 
     socket.emit('connection-reply', {});
 */
+
+    socket.on('egi_connect', (addr, port) => {
+      let station = new NetStation({addr, port});
+
+      station.connect().then(() => {
+        socket.on('error', (error) => {
+            console.log(`EGI-Error: ${error}`);
+        });
+      
+        socket.on('egi_beginSession', () => {
+          station.beginSession()
+        });
+        
+        socket.on('egi_startRecording', () => {
+          station.startRecording();
+        });
+        
+        socket.on('egi_endRecording', () => {
+          station.endRecording();
+        });
+        
+        socket.on('egi_endSession', () => {
+          station.endSession();
+        });
+        
+        socket.on('egi_sync', () => {
+          station.sync();
+        });
+        
+        socket.on('egi_sendEvent', (...args) => {
+          station.sendEvent(...args);
+        })
+        
+        socket.on('egi_sendAttensionCommand', () => {
+          station.sendAttensionCommand();
+        })
+        
+        socket.on('egi_sendLocalTime', (timestamp=null) => {
+          station.sendLocalTime(timestamp);
+        });
+      });
+    });
   });
 }
 
