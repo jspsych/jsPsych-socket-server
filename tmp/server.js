@@ -51,7 +51,7 @@ function start({port=DEFAULT_PORT, hardwareAddr=DEFAULT_ADDR, hardwarePort=DEFAU
 				station.sendEvent(...args);
 			})
 			
-			client.on('egi_sendAttensionCommand', () => {
+			client.on('egi_sendAttentionCommand', () => {
 				station.sendAttensionCommand();
 			})
 			
