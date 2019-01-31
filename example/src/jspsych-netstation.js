@@ -1,7 +1,8 @@
+jsPsych.hardware = {};
 jsPsych.hardware.netstation = (function(){
     
     var is_connected = false;
-    const server_socket = null;
+    var server_socket = null;
 
     var module = {};
 
@@ -17,21 +18,24 @@ jsPsych.hardware.netstation = (function(){
         });
     }
 
-    module.beginSession = function(){
+    module.beginSession =  function(){
         if(check_connected()){
             server_socket.emit('egi_beginSession');
         }
+        
     }
 
     module.endSession = function(){
-        if(check_connected()){
-            server_socket.emit('egi_endSession');
-        }
+        return new Promise((res, rej) => {
+            if(check_connected()){
+                server_socket.emit('egi_endSession', ack => res(ack));
+            }
+        });
     }
 
     module.startRecording = function(){
         if(check_connected()){
-            server_socket.emit('egi_startRecording');
+            server_socket.emit('egi_startRecording')
         }
     }
 
@@ -43,7 +47,7 @@ jsPsych.hardware.netstation = (function(){
 
     module.sync = function(){
         if(check_connected()){
-            server_socket.emit('egi_sync');
+            server_socket.emit('egi_sync')//, ack => res(ack));
         }
     }
 
@@ -55,7 +59,7 @@ jsPsych.hardware.netstation = (function(){
 
     module.sendAttentionCommand = function(){
         if(check_connected()){
-            server_socket.emit('egi_sendAttentionCommand');
+            server_socket.emit('egi_sendAttentionCommand', args, ack => res(ack));
         }
     }
 

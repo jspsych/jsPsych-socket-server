@@ -1,7 +1,16 @@
-const { NetStation } = require('./netstation');
-const app = require('express')();
+const express = require('express');
+const { NetStation } = require('../../lib/netstation');
+const app = express();
+app.use(express.static('.'));
 const server = require('http').Server(app);
-const io = require('socket.io')(server);
+const io = require('socket.io').listen(server);
+
+// io.set('origins', '*:*');
+/*
+const io = require('socket.io')(server, {
+	origins: "*:*" // "http://localhost:* http://127.0.0.1:*"
+});
+*/
 
 const DEFAULT_PORT = 53352;
 const DEFAULT_HARDWARE_PORT = 53353;
@@ -47,8 +56,8 @@ function start({port=DEFAULT_PORT, hardwareAddr=DEFAULT_ADDR, hardwarePort=DEFAU
 				station.sync();
 			});
 			
-			client.on('egi_sendEvent', (...args) => {
-				station.sendEvent(...args);
+			client.on('egi_sendEvent', (args={}) => {
+				station.sendEvent(args);
 			})
 			
 			client.on('egi_sendAttentionCommand', () => {

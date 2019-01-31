@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <script src="jspsych/jspsych.js"></script>
+        <script src="jspsych/plugins/jspsych-html-keyboard-response.js"></script>
+		<script src="jspsych/plugins/socket.io.js"></script>
+		<script src="src/jspsych-netstation.js"></script>
+        <link href="jspsych/css/jspsych.css" rel="stylesheet">
+    </head>
+    <body></body>
+    <script>
+    
+    var timeline = [];
+
+    var welcome = {
+        type: 'html-keyboard-response',
+        stimulus: '<p>Welcome. When you are ready to begin, press C to continue.</p>',
+        choices: ['C'],
+        on_start: function(){
+            jsPsych.hardware.netstation.connect();
+        },
+        on_finish: function(){
+            jsPsych.hardware.netstation.beginSession();
+            jsPsych.hardware.netstation.sync();
+            jsPsych.hardware.netstation.startRecording();
+        }
+    }
+    timeline.push(welcome);
+
+    var trials = [
+        {stimulus: '<p style="font-size:28px;">< < < < <</p>', correct_response: 'F', code: 'CONL'},
+        {stimulus: '<p style="font-size:28px;">> > > > ></p>', correct_response: 'J', code: 'CONR'},
+        {stimulus: '<p style="font-size:28px;">> > < > ></p>', correct_response: 'F', code: 'INCL'},
+        {stimulus: '<p style="font-size:28px;">< < > < <</p>', correct_response: 'J', code: 'INCR'}
+    ]
+
+    var last_onset = null;
+    var test_procedure = {
+        timeline: [
+            {
+                type: 'html-keyboard-response',
+                stimulus: '<p style="font-size:28px;">+</p>',
+                choices: jsPsych.NO_KEYS,
+                trial_duration: 500
+            },
+            {
+                type: 'html-keyboard-response',
+                stimulus: jsPsych.timelineVariable('stimulus'),
+                data: {
+                    code: jsPsych.timelineVariable('code'),
+                    correct_response: jsPsych.timelineVariable('correct_response')
+                },
+                on_load: function(){
+                    last_onset = Date.now() % (1000 * 60 * 60 * 24);
+                },
+                on_finish: function(data){
+                    data.correct = data.key_press == jsPsych.pluginAPI.convertKeyCharacterToKeyCode(data.correct_response);
+                    jsPsych.hardware.netstation.sendEvent({
+                        key: data.code,
+                        timestamp: last_onset,
+						// label: 'test_label',
+						// description: 'test_desc',
+                        table: {
+                            test: data.correct
+                        }
+                    });
+                }
+            }
+        ],
+        timeline_variables: trials,
+        sample: {
+            type: 'with-replacement',
+            size: 4
+        }
+    }
+    timeline.push(test_procedure);
+
+    var end = {
+        type: 'html-keyboard-response',
+        stimulus: '<p>The end!</p>',
+        choices: jsPsych.NO_KEYS,
+        on_start: function(){
+            console.log(jsPsych.data.get().csv());
+        }
+    }
+    timeline.push(end);
+
+    jsPsych.init({
+        timeline: timeline
+    })
+    </script>
+</html>
